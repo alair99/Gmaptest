@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>Marker animations with <code>setTimeout()</code></title>
+    <style>
+    html,
+    body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+    }
+    
+    #map {
+        height: 100%;
+    }
+    
+    #coords {
+        background-color: black;
+        color: white;
+        padding: 5px;
+    }
+    /*#floating-panel {
+        position: absolute;
+        top: 10px;
+        left: 25%;
+        z-index: 5;
+        background-color: #fff;
+        padding: 5px;
+        border: 1px solid #999;
+        text-align: center;
+        font-family: 'Roboto', 'sans-serif';
+        line-height: 30px;
+        padding-left: 10px;
+    }
+    
+    #floating-panel {
+        margin-left: -52px;
+    }*/
+    </style>
+</head>
+
+<body>
+    <div id="map" style="width: 640px; height: 480px;"></div>
+    <div id="coords"></div>
+    <div id="floating-panel">
+        <input id="address" type="textbox" value="Sydney, NSW">
+        <input id="submit" type="button" value="Geocode">
+        <div id="Geocode_result" style="display:inline;"></div>
+    </div>
+    <script>
+    // If you're adding a number of markers, you may want to drop them on the map
+    // consecutively rather than all at once. This example shows how to use
+    // window.setTimeout() to space your markers' animation.
+
+    var neighborhoods = [{
+        lat: 24.7964655,
+        lng: 120.9966796
+    }, {
+        lat: 24.7985439,
+        lng: 120.9902403
+    }, {
+        lat: 24.7877049,
+        lng: 120.9869016
+    }, {
+        lat: 24.7899045,
+        lng: 120.9945603
+    }];
+
+    var markers = [];
+    var map;
+    var directionsDisplay;
+
+    function initMap() {
+        map = new google.maps.Map(document.getElementById('map'), {
+            zoom: 15,
+            center: {
+                lat: 24.794,
+                lng: 120.99
+            }
+        });
+        // Show the lat and lng under the mouse cursor.
+        var coordsDiv = document.getElementById('coords');
+        map.controls[google.maps.ControlPosition.TOP_CENTER].push(coordsDiv);
+        map.addListener('mousemove', function(event) {
+            coordsDiv.textContent =
+                'lat: ' + Math.floor(event.latLng.lat() * 1000) / 1000 + ', ' +
+                'lng: ' + Math.floor(event.latLng.lng() * 1000) / 1000;
+        });
+        drop();
+        calcRoute();
+
+        var geocoder = new google.maps.Geocoder();
+        document.getElementById('submit').addEventListener('click', function() {
+            geocodeAddress(geocoder);
+        });
+    }
+
+    function drop() {
+        clearMarkers();
+        for (var i = 0; i < neighborhoods.length; i++) {
+            addMarkerWithTimeout(neighborhoods[i], i * 200);
+
+        }
+    }
+
+    function addMarkerWithTimeout(position, timeout) {
+        window.setTimeout(function() {
+            var marker = new google.maps.Marker({
+                position: position,
+                map: map,
+                draggable: true,
+                animation: google.maps.Animation.DROP
+            });
+            var contentString = '大門';
+
+            var infowindow = new google.maps.InfoWindow({
+                content: contentString
+            });
+            marker.addListener('click', function() {
+                infowindow.open(map, marker);
+            });
+
+            markers.push(marker);
+        }, timeout);
+    }
+
+    function clearMarkers() {
+        for (var i = 0; i < markers.length; i++) {
+            markers[i].setMap(null);
+        }
+        markers = [];
+    }
+
+    function calcRoute() {
+        var start1 = new google.maps.LatLng(24.7985439, 120.9902403);
+        var end1 = new google.maps.LatLng(24.7877049, 120.9869016); //南門
+        var start2 = new google.maps.LatLng(24.7964655, 120.9966796); //北門
+        var end2 = new google.maps.LatLng(24.7899045, 120.9945603);
+
+        var directionsDisplay = [];
+        directionsDisplay[0] = new google.maps.DirectionsRenderer({
+            map: map,
+            suppressMarkers: true
+        });
+        directionsDisplay[1] = new google.maps.DirectionsRenderer({
+            map: map,
+            suppressMarkers: true
+        });
+
+        var routes = [{
+            origin: start1,
+            destination: end1
+        }, {
+            origin: start2, //藝術中心,
+            destination: end2 //北門
+        }];
+
+        var rendererOptions = {
+            preserveViewport: true,
+            suppressMarkers: true,
+            routeIndex: 1
+        };
+        var directionsService = new google.maps.DirectionsService();
+
+        routes.forEach(function(route) {
+            var request = {
+                origin: route.origin,
+                destination: route.destination,
+                travelMode: 'DRIVING'
+            };
+
+            var directionsDisplay = new google.maps.DirectionsRenderer(rendererOptions);
+            directionsDisplay.setMap(map);
+
+            directionsService.route(request, function(response, status) {
+                if (status == 'OK') { // Display the route on the map.
+                    directionsDisplay.setDirections(response);
+                }
+            });
+        });
+
+    }
+
+    function geocodeAddress(geocoder) {
+        var address = document.getElementById('address').value;
+        geocoder.geocode({'address': address}, function(results, status) {
+            if (status === google.maps.GeocoderStatus.OK) {
+                $('#Geocode_result').text(Math.floor(results[0].geometry.location.lat() * 1000) / 1000 + ", " + Math.floor(results[0].geometry.location.lng() * 1000) / 1000);
+                //或可以放到marker上然後地圖以其為中心
+                // resultsMap.setCenter(results[0].geometry.location); 
+                // var marker = new google.maps.Marker({ 
+                //   map: resultsMap, 
+                //   position: results[0].geometry.location 
+                // });
+            } 
+            else {
+                alert('Geocode was not successful for the following reason: ' + status);
+            }
+        });
+    }
+    </script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCP4XOaHto0Jprz8ifIc7ugn_bt4VIqQU0&callback=initMap" async defer></script>
+    <script src="https://code.jquery.com/jquery-3.1.1.min.js"></script>
+</body>
+
+</html>
